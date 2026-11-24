@@ -86,4 +86,4 @@ adaptador delgado. Ver `AGENTS.md` para el detalle de las reglas.
 
 ### 14. Cierre
 - [x] README con uso, arquitectura y limitaciones.
-- [ ] Listar al usuario las decisiones de la sección 10 de `AGENTS.md`.
+- [x] Listar al usuario las decisiones de la sección 10 de `AGENTS.md`.
