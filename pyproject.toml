@@ -1,0 +1,52 @@
+[project]
+name = "organizadorplanillanotas"
+version = "0.1.0"
+description = "Generador de planillas de notas en Excel con estadísticas vivas"
+readme = "README.md"
+authors = [
+    { name = "José Alejandro Aburto, PhD", email = "rsgenus1.math@gmail.com" }
+]
+requires-python = ">=3.11"
+dependencies = [
+    "fastexcel>=0.12",
+    "polars>=1.0",
+    "xlsxwriter>=3.2",
+]
+
+[project.optional-dependencies]
+ui = ["streamlit>=1.36"]
+dev = [
+    "openpyxl>=3.1",
+    "pytest>=8.0",
+    "ruff>=0.6",
+]
+
+[project.scripts]
+gradebook = "gradebook.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.13.9,<0.14.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "gradebook"
+module-root = "src"
+
+[tool.uv]
+package = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["gradebook"]
