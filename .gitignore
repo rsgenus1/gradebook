@@ -16,3 +16,6 @@ wheels/
 # Local scratch space and generated artifacts
 .scratch/
 tests/samples/
+
+# Notas personales del agente (no se versionan)
+feedback.md
