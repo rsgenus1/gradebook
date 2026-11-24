@@ -67,9 +67,9 @@ adaptador delgado. Ver `AGENTS.md` para el detalle de las reglas.
 - [x] CLI `python -m gradebook entrada.xlsx --preset 3_evaluaciones -o salida.xlsx`.
 
 ### 10. UI Streamlit
-- [ ] Subida, elección de columnas, vista previa normalizada y avisos.
-- [ ] Selección de preset / personalizada con suma en vivo y bloqueo de descarga.
-- [ ] Descarga del `.xlsx` en memoria; sin persistir datos personales.
+- [x] Subida, elección de columnas, vista previa normalizada y avisos.
+- [x] Selección de preset / personalizada con suma en vivo y bloqueo de descarga.
+- [x] Descarga del `.xlsx` en memoria; sin persistir datos personales.
 
 ### 11. Datos de ejemplo y tests
 - [ ] `tests/make_samples.py` con curso sintético (~35), tildes/ñ, blancos y casos borde.
