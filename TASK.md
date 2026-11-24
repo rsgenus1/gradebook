@@ -23,9 +23,9 @@ adaptador delgado. Ver `AGENTS.md` para el detalle de las reglas.
 - [x] `TASK.md` y `README.md` iniciales.
 
 ### 2. Modelos y errores del dominio
-- [ ] `models.py`: `Student`, `StudentTable`, `Warning`, `ColumnGuess`.
-- [ ] Excepciones propias: `GradebookError`, `InputFormatError`, `InvalidSchemeError`.
-- [ ] Constantes compartidas (notas, nombres de hojas, tabla).
+- [x] `models.py`: `Student`, `StudentTable`, `Warning`, `ColumnGuess`.
+- [x] Excepciones propias: `GradebookError`, `InputFormatError`, `InvalidSchemeError`.
+- [x] Constantes compartidas (notas, nombres de hojas, tabla).
 
 ### 3. Normalización de RUT
 - [ ] `normalize_rut()`: sin puntos, guion ni espacios, en mayúsculas.
