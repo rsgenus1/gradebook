@@ -28,6 +28,8 @@ COL_FINAL = "Promedio Final"
 
 ACCUMULATIVE_PREFIX = "Acumulativa"
 EVALUATION_PREFIX = "Evaluación"
+DEFAULT_N_CONTROLS = 6
+MAX_N_CONTROLS = 30
 
 # --- Validación de notas ---------------------------------------------------
 

@@ -33,11 +33,11 @@ adaptador delgado. Ver `AGENTS.md` para el detalle de las reglas.
 - [x] Detección de duplicados y de RUT vacíos.
 
 ### 4. Ponderaciones y redondeo
-- [ ] `GradingScheme` inmutable con evaluaciones + peso de la acumulativa.
-- [ ] `PRESETS` para 2 y 3 evaluaciones (35/35/30 y 20/25/25/30).
-- [ ] Validación de suma 100 % con `Decimal` (sin errores de flotante).
-- [ ] `round_grade()` half-up; promedio ponderado con `Decimal` de punta a punta.
-- [ ] Regla de componente faltante = 1.0 solo en el promedio final.
+- [x] `GradingScheme` inmutable con evaluaciones + peso de la acumulativa.
+- [x] `PRESETS` para 2 y 3 evaluaciones (35/35/30 y 20/25/25/30).
+- [x] Validación de suma 100 % con `Decimal` (sin errores de flotante).
+- [x] `round_grade()` half-up; promedio ponderado con `Decimal` de punta a punta.
+- [x] Regla de componente faltante = 1.0 solo en el promedio final.
 
 ### 5. Lectura de la planilla de entrada
 - [ ] `read_students()` y `detect_columns()` sobre `.xlsx` / `.csv` en memoria.
