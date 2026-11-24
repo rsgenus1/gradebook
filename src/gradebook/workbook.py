@@ -25,23 +25,29 @@ _FIRST_DATA_ROW = 2
 
 _GRADE_DECIMALS = abs(C.GRADE_STEP.as_tuple().exponent)
 
-# Filas base de la hoja Stats (0-based).
-_STATS_TITLE_ROW = 0
-_STATS_SUBTITLE_ROW = 1
-_STATS_HEADER_ROW = 3
-_STATS_FIRST_ROW = 4
+# Filas base de la hoja Final (0-based).
+_FINAL_TITLE_ROW = 0
+_FINAL_SUBTITLE_ROW = 1
+_FINAL_HEADER_ROW = 3
+_FINAL_FIRST_ROW = 4
 
-_AUX_DIST_TITLE_ROW = 12
 _AUX_DIST_HEADER_ROW = 13
 _AUX_DIST_FIRST_ROW = 14
 
-_AUX_PIE_TITLE_ROW = 21
 _AUX_PIE_HEADER_ROW = 22
 _AUX_PIE_FIRST_ROW = 23
 
-_CHART_ANCHOR_ROW = 27
-_CHART_WIDTH = 460
-_CHART_HEIGHT = 300
+_FINAL_CHART_ANCHOR_ROW = 27
+_FINAL_CHART_WIDTH = 460
+_FINAL_CHART_HEIGHT = 300
+
+# Hojas Stats: una sección (barras + torta) por evaluación regular.
+_STATS_TITLE_ROW = 0
+_STATS_SUBTITLE_ROW = 1
+_STATS_FIRST_SECTION_ROW = 3
+_STATS_SECTION_HEIGHT = 22
+_EVAL_CHART_WIDTH = 420
+_EVAL_CHART_HEIGHT = 250
 
 _STAT_ROWS: tuple[tuple[str, str, str], ...] = (
     ("max", "Máximo", "grade"),
@@ -203,8 +209,17 @@ class _Formats:
         self.subtitle = workbook.add_format(
             {**base, "italic": True, "font_color": C.COLOR_SUBTITLE}
         )
-        self.section = workbook.add_format(
-            {**base, "bold": True, "font_size": 11, "font_color": C.COLOR_TITLE}
+        self.section_band = workbook.add_format(
+            {
+                **base,
+                "bold": True,
+                "font_size": 12,
+                "font_color": C.COLOR_HEADER_FONT,
+                "bg_color": C.COLOR_HEADER_BG,
+                "align": "left",
+                "valign": "vcenter",
+                "indent": 1,
+            }
         )
         self.stat_label = workbook.add_format(
             {
@@ -296,7 +311,7 @@ def _accumulative_formula(row: int, layout: _Layout) -> str:
 
 
 def build_workbook(students: StudentTable, scheme: GradingScheme) -> bytes:
-    """Genera el ``.xlsx`` (hojas Grades y Stats) y lo devuelve como bytes."""
+    """Genera el ``.xlsx`` (hojas Grades, Stats y Final) y lo devuelve como bytes."""
     scheme.validate()
     if not students.students:
         raise InputFormatError("Se necesita al menos un estudiante para generar la planilla.")
@@ -317,7 +332,8 @@ def build_workbook(students: StudentTable, scheme: GradingScheme) -> bytes:
     layout = _build_layout(scheme)
 
     _write_grades(workbook, formats, layout, students, scheme)
-    _write_stats(workbook, formats, layout, scheme)
+    _write_stats(workbook, formats, scheme)
+    _write_final(workbook, formats, layout, scheme)
 
     workbook.close()
     return output.getvalue()
@@ -531,16 +547,126 @@ def _calculated_cols(layout: _Layout) -> tuple[int, ...]:
     return tuple(columns)
 
 
-# --- Hoja Stats ------------------------------------------------------------
+# --- Hoja Stats: una sección por evaluación regular -------------------------
 
 
 def _write_stats(
     workbook: xlsxwriter.Workbook,
     fmt: _Formats,
+    scheme: GradingScheme,
+) -> None:
+    """Un gráfico de barras y uno de torta por cada evaluación regular.
+
+    Cada evaluación ocupa su propia página al imprimir, con sus tablas
+    auxiliares y sus dos gráficos.
+    """
+    sheet = workbook.add_worksheet(C.SHEET_STATS)
+    sheet.hide_gridlines(2)
+
+    sheet.set_column(0, 0, 26)
+    sheet.set_column(1, 1, 14)
+    sheet.set_column(2, 2, 14)
+    sheet.set_column(3, 3, 26)
+    sheet.set_column(4, 7, 14)
+
+    sheet.merge_range(
+        _STATS_TITLE_ROW,
+        0,
+        _STATS_TITLE_ROW,
+        7,
+        "Estadísticas por evaluación",
+        fmt.title,
+    )
+    sheet.merge_range(
+        _STATS_SUBTITLE_ROW,
+        0,
+        _STATS_SUBTITLE_ROW,
+        7,
+        "Cada evaluación tiene su distribución por intervalos y su gráfico de "
+        f"aprobación. Todo se calcula desde la hoja {C.SHEET_GRADES}.",
+        fmt.subtitle,
+    )
+
+    section_starts: list[int] = []
+    for index, evaluation in enumerate(scheme.evaluations):
+        start = _STATS_FIRST_SECTION_ROW + index * _STATS_SECTION_HEIGHT
+        section_starts.append(start)
+        _write_evaluation_section(workbook, sheet, fmt, evaluation.name, start)
+
+    if section_starts:
+        sheet.set_h_pagebreaks(section_starts[1:])
+
+    sheet.set_landscape()
+    sheet.set_paper(9)  # A4
+    # Solo se ajusta el ancho: el alto se reparte con los saltos de página
+    # manuales, uno por evaluación.
+    sheet.fit_to_pages(1, 0)
+    sheet.set_margins(0.3, 0.3, 0.5, 0.5)
+    sheet.set_footer("&C&P de &N")
+
+
+def _write_evaluation_section(
+    workbook: xlsxwriter.Workbook,
+    sheet: xlsxwriter.worksheet.Worksheet,
+    fmt: _Formats,
+    name: str,
+    start: int,
+) -> None:
+    sheet.set_row(start, 26)
+    sheet.merge_range(
+        start,
+        0,
+        start,
+        7,
+        f"{name} · distribución y aprobación",
+        fmt.section_band,
+    )
+
+    reference = _table_ref(name)
+    header_row = start + 1
+    _write_distribution_aux(sheet, fmt, reference, header_row, label_col=0)
+    _write_approval_aux(sheet, fmt, reference, header_row, label_col=3)
+
+    bar_first = header_row + 1
+    pie_first = header_row + 1
+
+    _add_bar_chart(
+        workbook,
+        sheet,
+        title=f"Distribución — {name}",
+        first_row=bar_first,
+        last_row=bar_first + 5,
+        cat_col=0,
+        val_col=1,
+        anchor=f"A{start + 9}",
+        width=_EVAL_CHART_WIDTH,
+        height=_EVAL_CHART_HEIGHT,
+    )
+    _add_pie_chart(
+        workbook,
+        sheet,
+        title=f"Aprobación — {name}",
+        first_row=pie_first,
+        last_row=pie_first + 2,
+        cat_col=3,
+        val_col=4,
+        anchor=f"E{start + 9}",
+        width=_EVAL_CHART_WIDTH,
+        height=_EVAL_CHART_HEIGHT,
+    )
+
+
+# --- Hoja Final: resumen y gráficos del promedio final ----------------------
+
+
+def _write_final(
+    workbook: xlsxwriter.Workbook,
+    fmt: _Formats,
     layout: _Layout,
     scheme: GradingScheme,
 ) -> None:
-    sheet = workbook.add_worksheet(C.SHEET_STATS)
+    """Resumen estadístico de todas las columnas y gráficos del promedio final."""
+    sheet = workbook.add_worksheet(C.SHEET_FINAL)
     sheet.hide_gridlines(2)
 
     stat_columns: list[tuple[str, int]] = [
@@ -552,42 +678,89 @@ def _write_stats(
     stat_columns.append((C.COL_FINAL, layout.final_col))
 
     last_value_col = len(stat_columns)
-    # El subtítulo necesita algo de ancho también en configuraciones angostas.
     merge_col = max(last_value_col, 7)
 
     sheet.set_column(0, 0, 26)
-    sheet.set_column(1, max(last_value_col, 7), 15)
+    sheet.set_column(1, merge_col, 15)
 
     sheet.merge_range(
-        _STATS_TITLE_ROW,
+        _FINAL_TITLE_ROW,
         0,
-        _STATS_TITLE_ROW,
+        _FINAL_TITLE_ROW,
         merge_col,
-        "Estadísticas del curso",
+        "Estadísticas finales del curso",
         fmt.title,
     )
     sheet.merge_range(
-        _STATS_SUBTITLE_ROW,
+        _FINAL_SUBTITLE_ROW,
         0,
-        _STATS_SUBTITLE_ROW,
+        _FINAL_SUBTITLE_ROW,
         merge_col,
-        "Fórmulas vivas: se actualizan solas al editar la hoja "
-        f"{C.SHEET_GRADES}. Las celdas en blanco cuentan como inasistencia.",
+        f"Resumen con fórmulas vivas desde {C.SHEET_GRADES}. "
+        "Las celdas en blanco cuentan como inasistencia.",
         fmt.subtitle,
     )
 
-    sheet.write_string(_STATS_HEADER_ROW, 0, "Estadística", fmt.header)
+    _write_summary_table(sheet, fmt, layout, stat_columns)
+    _write_distribution_aux(
+        sheet, fmt, _table_ref(C.COL_FINAL), _AUX_DIST_HEADER_ROW, label_col=0
+    )
+    _write_approval_aux(
+        sheet, fmt, _table_ref(C.COL_FINAL), _AUX_PIE_HEADER_ROW, label_col=0
+    )
+
+    _add_bar_chart(
+        workbook,
+        sheet,
+        title="Distribución — Promedio Final",
+        first_row=_AUX_DIST_FIRST_ROW,
+        last_row=_AUX_DIST_FIRST_ROW + 5,
+        cat_col=0,
+        val_col=1,
+        anchor=f"A{_FINAL_CHART_ANCHOR_ROW + 1}",
+        width=_FINAL_CHART_WIDTH,
+        height=_FINAL_CHART_HEIGHT,
+        title_size=13,
+    )
+    _add_pie_chart(
+        workbook,
+        sheet,
+        title="Aprobación — Promedio Final",
+        first_row=_AUX_PIE_FIRST_ROW,
+        last_row=_AUX_PIE_FIRST_ROW + 2,
+        cat_col=0,
+        val_col=1,
+        anchor=f"E{_FINAL_CHART_ANCHOR_ROW + 1}",
+        width=_FINAL_CHART_WIDTH,
+        height=_FINAL_CHART_HEIGHT,
+        title_size=13,
+    )
+
+    sheet.set_landscape()
+    sheet.set_paper(9)
+    sheet.fit_to_pages(1, 1)
+    sheet.set_margins(0.3, 0.3, 0.5, 0.5)
+    sheet.set_footer("&C&P de &N")
+
+
+def _write_summary_table(
+    sheet: xlsxwriter.worksheet.Worksheet,
+    fmt: _Formats,
+    layout: _Layout,
+    stat_columns: list[tuple[str, int]],
+) -> None:
+    sheet.write_string(_FINAL_HEADER_ROW, 0, "Estadística", fmt.header)
     for offset, (header, column) in enumerate(stat_columns, start=1):
         is_calculated = column in (layout.accumulative_col, layout.final_col)
         sheet.write_string(
-            _STATS_HEADER_ROW,
+            _FINAL_HEADER_ROW,
             offset,
             header,
             fmt.header_calc if is_calculated else fmt.header,
         )
 
-    assistants_row = _STATS_FIRST_ROW + 2
-    failed_row = _STATS_FIRST_ROW + 3
+    assistants_row = _FINAL_FIRST_ROW + 2
+    failed_row = _FINAL_FIRST_ROW + 3
     passing = _literal(C.PASSING_GRADE)
 
     for offset, (header, _column) in enumerate(stat_columns, start=1):
@@ -597,22 +770,11 @@ def _write_stats(
         failed_cell = f"{letter}{failed_row + 1}"
 
         for index, (key, label, kind) in enumerate(_STAT_ROWS):
-            row = _STATS_FIRST_ROW + index
+            row = _FINAL_FIRST_ROW + index
             if offset == 1:
                 sheet.write_string(row, 0, label, fmt.stat_label)
             formula = _stat_formula(key, reference, assistants_cell, failed_cell, passing)
             sheet.write_formula(row, offset, formula, _stat_format(fmt, kind), "")
-
-    _write_distribution_aux(sheet, fmt)
-    _write_approval_aux(sheet, fmt)
-
-    _add_bar_chart(workbook, sheet)
-    _add_pie_chart(workbook, sheet)
-
-    sheet.set_landscape()
-    sheet.set_paper(9)
-    sheet.fit_to_pages(1, 1)
-    sheet.set_margins(0.3, 0.3, 0.5, 0.5)
 
 
 def _stat_formula(
@@ -642,58 +804,77 @@ def _stat_format(fmt: _Formats, kind: str) -> xlsxwriter.format.Format:
     }[kind]
 
 
+# --- Tablas auxiliares de los gráficos -------------------------------------
+
+
 def _write_distribution_aux(
     sheet: xlsxwriter.worksheet.Worksheet,
     fmt: _Formats,
+    reference: str,
+    header_row: int,
+    *,
+    label_col: int = 0,
 ) -> None:
-    final_ref = _table_ref(C.COL_FINAL)
-    sheet.write_string(_AUX_DIST_TITLE_ROW, 0, "Distribución de Promedio Final", fmt.section)
-    sheet.write_string(_AUX_DIST_HEADER_ROW, 0, "Intervalo", fmt.aux_header)
-    sheet.write_string(_AUX_DIST_HEADER_ROW, 1, "Estudiantes", fmt.aux_header)
+    sheet.write_string(header_row, label_col, "Intervalo", fmt.aux_header)
+    sheet.write_string(header_row, label_col + 1, "Estudiantes", fmt.aux_header)
 
     for index, low in enumerate(range(1, 7)):
-        row = _AUX_DIST_FIRST_ROW + index
+        row = header_row + 1 + index
         label = f"[{low},{low + 1}]" if low == 6 else f"[{low},{low + 1}["
         if low == 6:
-            formula = f'=COUNTIFS({final_ref},">=6",{final_ref},"<=7")'
+            formula = f'=COUNTIFS({reference},">=6",{reference},"<=7")'
         else:
-            formula = f'=COUNTIFS({final_ref},">={low}",{final_ref},"<{low + 1}")'
-        sheet.write_string(row, 0, label, fmt.aux_label)
-        sheet.write_formula(row, 1, formula, fmt.aux_value, "")
+            formula = f'=COUNTIFS({reference},">={low}",{reference},"<{low + 1}")'
+        sheet.write_string(row, label_col, label, fmt.aux_label)
+        sheet.write_formula(row, label_col + 1, formula, fmt.aux_value, "")
 
 
 def _write_approval_aux(
     sheet: xlsxwriter.worksheet.Worksheet,
     fmt: _Formats,
+    reference: str,
+    header_row: int,
+    *,
+    label_col: int = 0,
 ) -> None:
-    final_ref = _table_ref(C.COL_FINAL)
     passing = _literal(C.PASSING_GRADE)
     rows = (
-        ("Aprobado (≥ 4.0)", f'=COUNTIF({final_ref},">={passing}")'),
-        ("Reprobado < 3.0", f'=COUNTIF({final_ref},"<3")'),
-        ("Reprobado 3.0 – 3.9", f'=COUNTIFS({final_ref},">=3",{final_ref},"<{passing}")'),
+        ("Aprobado (≥ 4.0)", f'=COUNTIF({reference},">={passing}")'),
+        ("Reprobado < 3.0", f'=COUNTIF({reference},"<3")'),
+        ("Reprobado 3.0 – 3.9", f'=COUNTIFS({reference},">=3",{reference},"<{passing}")'),
     )
-    sheet.write_string(_AUX_PIE_TITLE_ROW, 0, "Aprobación del curso", fmt.section)
-    sheet.write_string(_AUX_PIE_HEADER_ROW, 0, "Categoría", fmt.aux_header)
-    sheet.write_string(_AUX_PIE_HEADER_ROW, 1, "Estudiantes", fmt.aux_header)
+    sheet.write_string(header_row, label_col, "Categoría", fmt.aux_header)
+    sheet.write_string(header_row, label_col + 1, "Estudiantes", fmt.aux_header)
     for index, (label, formula) in enumerate(rows):
-        row = _AUX_PIE_FIRST_ROW + index
-        sheet.write_string(row, 0, label, fmt.aux_label)
-        sheet.write_formula(row, 1, formula, fmt.aux_value, "")
+        row = header_row + 1 + index
+        sheet.write_string(row, label_col, label, fmt.aux_label)
+        sheet.write_formula(row, label_col + 1, formula, fmt.aux_value, "")
+
+
+# --- Gráficos ---------------------------------------------------------------
 
 
 def _add_bar_chart(
     workbook: xlsxwriter.Workbook,
     sheet: xlsxwriter.worksheet.Worksheet,
+    *,
+    title: str,
+    first_row: int,
+    last_row: int,
+    cat_col: int,
+    val_col: int,
+    anchor: str,
+    width: int,
+    height: int,
+    title_size: int = 12,
 ) -> None:
     chart = workbook.add_chart({"type": "column"})
-    first = _AUX_DIST_FIRST_ROW
-    last = _AUX_DIST_FIRST_ROW + 5
+    sheet_name = sheet.get_name()
     chart.add_series(
         {
             "name": "Estudiantes",
-            "categories": [C.SHEET_STATS, first, 0, last, 0],
-            "values": [C.SHEET_STATS, first, 1, last, 1],
+            "categories": [sheet_name, first_row, cat_col, last_row, cat_col],
+            "values": [sheet_name, first_row, val_col, last_row, val_col],
             "data_labels": {
                 "value": True,
                 "category": False,
@@ -711,11 +892,11 @@ def _add_bar_chart(
             ],
         }
     )
-    chart.set_title({"name": "Distribución de Promedio Final", "name_font": {"size": 13, "bold": True}})
+    chart.set_title({"name": title, "name_font": {"size": title_size, "bold": True}})
     chart.set_x_axis(
         {
             "name": "Nota",
-            "name_font": {"size": 10},
+            "name_font": {"size": 9},
             "num_font": {"size": 9},
             "major_tick_mark": "none",
         }
@@ -723,7 +904,7 @@ def _add_bar_chart(
     chart.set_y_axis(
         {
             "name": "Cantidad de estudiantes",
-            "name_font": {"size": 10},
+            "name_font": {"size": 9},
             "num_font": {"size": 9},
             "major_gridlines": {"visible": False},
             "min": 0,
@@ -734,22 +915,31 @@ def _add_bar_chart(
     chart.set_legend({"none": True})
     chart.set_chartarea({"border": {"none": True}})
     chart.set_plotarea({"border": {"none": True}})
-    chart.set_size({"width": _CHART_WIDTH, "height": _CHART_HEIGHT})
-    sheet.insert_chart(f"A{_CHART_ANCHOR_ROW + 1}", chart, {"x_offset": 6, "y_offset": 6})
+    chart.set_size({"width": width, "height": height})
+    sheet.insert_chart(anchor, chart, {"x_offset": 6, "y_offset": 6})
 
 
 def _add_pie_chart(
     workbook: xlsxwriter.Workbook,
     sheet: xlsxwriter.worksheet.Worksheet,
+    *,
+    title: str,
+    first_row: int,
+    last_row: int,
+    cat_col: int,
+    val_col: int,
+    anchor: str,
+    width: int,
+    height: int,
+    title_size: int = 12,
 ) -> None:
     chart = workbook.add_chart({"type": "pie"})
-    first = _AUX_PIE_FIRST_ROW
-    last = _AUX_PIE_FIRST_ROW + 2
+    sheet_name = sheet.get_name()
     chart.add_series(
         {
             "name": "Aprobación",
-            "categories": [C.SHEET_STATS, first, 0, last, 0],
-            "values": [C.SHEET_STATS, first, 1, last, 1],
+            "categories": [sheet_name, first_row, cat_col, last_row, cat_col],
+            "values": [sheet_name, first_row, val_col, last_row, val_col],
             "data_labels": {
                 "percentage": True,
                 "category": False,
@@ -765,12 +955,12 @@ def _add_pie_chart(
             ],
         }
     )
-    chart.set_title({"name": "Aprobación del curso", "name_font": {"size": 13, "bold": True}})
+    chart.set_title({"name": title, "name_font": {"size": title_size, "bold": True}})
     chart.set_legend({"position": "right", "font": {"size": 9}})
     chart.set_chartarea({"border": {"none": True}})
     chart.set_plotarea({"border": {"none": True}})
-    chart.set_size({"width": _CHART_WIDTH, "height": _CHART_HEIGHT})
-    sheet.insert_chart(f"F{_CHART_ANCHOR_ROW + 1}", chart, {"x_offset": 6, "y_offset": 6})
+    chart.set_size({"width": width, "height": height})
+    sheet.insert_chart(anchor, chart, {"x_offset": 6, "y_offset": 6})
 
 
 __all__ = ["build_workbook"]

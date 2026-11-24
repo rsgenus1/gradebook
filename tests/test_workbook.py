@@ -47,7 +47,7 @@ def header_column(sheet: Worksheet, header: str) -> int:
 
 def test_sheets_and_order() -> None:
     workbook = load(build())
-    assert workbook.sheetnames == ["Grades", "Stats"]
+    assert workbook.sheetnames == ["Grades", "Stats", "Final"]
 
 
 def test_grades_headers_in_order() -> None:
@@ -167,8 +167,8 @@ def test_conditional_formatting_for_low_grades() -> None:
     assert any("ROUND" in formula and "<4" in formula for formula in formulas)
 
 
-def test_stats_sheet_formulas_and_layout() -> None:
-    sheet = load(build())["Stats"]
+def test_final_sheet_has_summary_table() -> None:
+    sheet = load(build())["Final"]
     labels = [sheet.cell(row=row, column=1).value for row in range(5, 12)]
     assert labels == [
         "Máximo",
@@ -187,15 +187,40 @@ def test_stats_sheet_formulas_and_layout() -> None:
     assert sheet["B9"].value == '=IFERROR(B8/B7,"")'
     assert "STDEV.S(tblGrades[Evaluación 1])" in sheet["B11"].value
 
-    # Auxiliares de los gráficos.
+    # Auxiliares de los gráficos del promedio final.
     assert "COUNTIFS" in sheet["B15"].value
     assert "COUNTIF" in sheet["B24"].value
     assert "COUNTIFS" in sheet["B26"].value
 
 
-def test_two_charts_exist() -> None:
+def test_stats_sheet_has_a_bar_and_pie_per_evaluation() -> None:
     sheet = load(build())["Stats"]
-    charts = sheet._charts
+
+    # Una sección por evaluación: barras + torta cada una.
+    assert len(sheet._charts) == 6
+    for index in range(0, 6, 2):
+        assert isinstance(sheet._charts[index], BarChart)
+        assert isinstance(sheet._charts[index + 1], PieChart)
+
+    # Auxiliares de cada sección, apuntando a su propia evaluación.
+    assert "tblGrades[Evaluación 1]" in sheet["B6"].value
+    assert "COUNTIFS" in sheet["B6"].value
+    assert "tblGrades[Evaluación 1]" in sheet["E6"].value
+    assert "tblGrades[Evaluación 2]" in sheet["B28"].value
+    assert "tblGrades[Evaluación 3]" in sheet["B50"].value
+
+    # Una página por evaluación; se ajusta solo el ancho para que la leyenda
+    # de la torta no caiga en una página extra.
+    assert len(sheet.row_breaks.brk) == 2
+    page_props = sheet.sheet_properties.pageSetUpPr
+    assert page_props is not None and page_props.fitToPage is True
+    # xlsxwriter omite los atributos que quedan en su valor por defecto (1).
+    assert sheet.page_setup.fitToWidth in (None, 1)
+    assert sheet.page_setup.fitToHeight == 0
+
+
+def test_final_sheet_has_two_charts() -> None:
+    charts = load(build())["Final"]._charts
     assert len(charts) == 2
     assert isinstance(charts[0], BarChart)
     assert isinstance(charts[1], PieChart)

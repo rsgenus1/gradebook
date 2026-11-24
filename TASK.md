@@ -87,3 +87,11 @@ adaptador delgado. Ver `AGENTS.md` para el detalle de las reglas.
 ### 14. Cierre
 - [x] README con uso, arquitectura y limitaciones.
 - [x] Listar al usuario las decisiones de la sección 10 de `AGENTS.md`.
+
+## Correcciones posteriores
+
+### 15. Gráficos por evaluación y hoja final
+- [x] `Stats` trae un gráfico de barras y uno de torta por **cada evaluación regular**.
+- [x] `Final`, al final del libro, concentra la tabla resumen y los gráficos del `Promedio Final`.
+- [x] Saltos de página por evaluación para que ningún gráfico quede partido.
+- [x] Se mantiene un solo archivo: un workbook aparte requeriría referencias externas o duplicar `Grades`.

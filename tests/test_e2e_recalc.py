@@ -131,7 +131,7 @@ def test_final_grades_and_all_statistics_match_python(tmp_path: Path) -> None:
         accum_values.append(None if expected_accum is None else float(expected_accum))
         final_values.append(None if expected_final is None else float(expected_final))
 
-    stats = workbook["Stats"]
+    stats = workbook["Final"]
     evaluation_values = [
         [grade["evaluations"][index] for grade in grades] for index in range(3)
     ]
@@ -161,7 +161,7 @@ def test_evaluation_without_students_does_not_break(tmp_path: Path) -> None:
 
     workbook = load_workbook(recalc(source, tmp_path / "recalc"), data_only=True)
     assert_no_errors(workbook)
-    stats = workbook["Stats"]
+    stats = workbook["Final"]
 
     assert value_or_none(stats["C5"].value) in (None, 0.0)  # MAX de columna vacía
     assert value_or_none(stats["C6"].value) is None          # MIN
@@ -179,7 +179,7 @@ def test_single_student_has_no_division_errors(tmp_path: Path) -> None:
 
     workbook = load_workbook(recalc(source, tmp_path / "recalc"), data_only=True)
     assert_no_errors(workbook)
-    stats = workbook["Stats"]
+    stats = workbook["Final"]
 
     expected_final = final_from_scheme(
         SCHEME, evaluations=grades[0]["evaluations"], controls=grades[0]["controls"]

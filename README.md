@@ -1,10 +1,15 @@
 # Organizador de Planilla de Notas
 
 Genera un archivo Excel de notas a partir de la lista de un curso
-(nombre + RUT). El `.xlsx` trae dos hojas:
+(nombre + RUT). El `.xlsx` trae tres hojas:
 
 - **`Grades`**: planilla para que el profesor ingrese las notas.
-- **`Stats`**: estadísticas y gráficos que se recalculan solos.
+- **`Stats`**: un gráfico de barras y uno de torta por **cada evaluación
+  regular**.
+- **`Final`**: tabla resumen con todas las estadísticas y los gráficos del
+  `Promedio Final`.
+
+Todo se recalcula solo.
 
 La app **no calcula notas**: escribe **fórmulas vivas de Excel**, así que el
 archivo se actualiza mientras el profesor escribe. También normaliza los RUT,
@@ -75,11 +80,17 @@ Los pesos se escriben en la fila superior de `Grades` y las fórmulas los
 referencian; si se editan y dejan de sumar 100 %, la celda de control muestra
 la suma en rojo.
 
-`Stats` calcula máximo, mínimo, asistentes, reprobados, % reprobados, mediana y
-desviación estándar **muestral** (`STDEV.S`) por evaluación, por acumulativa y
-para el promedio final, además de dos gráficos (distribución por intervalos y
-aprobación). Usa referencias estructuradas (`tblGrades[...]`), de modo que
-incluye filas nuevas si se agregan estudiantes dentro de la tabla.
+`Stats` muestra, por cada evaluación regular, su distribución por intervalos
+(`[1,2[`, …, `[6,7]`) y su aprobación (aprobados, reprobados bajo 3.0 y entre
+3.0 y 3.9). Cada evaluación ocupa su propia página al imprimir.
+
+`Final` concentra la tabla con máximo, mínimo, asistentes, reprobados,
+% reprobados, mediana y desviación estándar **muestral** (`STDEV.S`) de cada
+evaluación, de la acumulativa y del promedio final, más los dos gráficos de
+`Promedio Final`.
+
+Ambas hojas usan referencias estructuradas (`tblGrades[...]`), de modo que
+incluyen filas nuevas si se agregan estudiantes dentro de la tabla.
 
 ## Arquitectura
 
@@ -89,7 +100,7 @@ src/gradebook/          motor Python puro — nunca importa Streamlit
   rut.py                normalización y módulo 11
   grading.py            GradingScheme, presets, Decimal y redondeo half-up
   io.py                 lectura de .xlsx / .csv en memoria
-  workbook.py           hojas Grades y Stats con xlsxwriter
+  workbook.py           hojas Grades, Stats y Final con xlsxwriter
   cli.py / __main__.py  CLI mínimo
 ui/streamlit_app.py     adaptador delgado (solo widgets y llamadas al motor)
 tests/                  muestras sintéticas y tests
@@ -109,7 +120,7 @@ uv run ruff check .
   con `Decimal`, componentes faltantes.
 - `test_io.py`: lectura de `.xlsx`/`.csv`, texto, autodetección y avisos.
 - `test_workbook.py`: hojas, encabezados, RUT como texto, validación de datos,
-  pesos referenciados, formatos y gráficos.
+  pesos referenciados, formatos, gráficos por evaluación y saltos de página.
 - `test_engine_independence.py`: el motor funciona con `streamlit` bloqueado.
 - `test_e2e_recalc.py`: llena notas, recalcula con LibreOffice y compara el
   promedio final y **todas** las estadísticas contra Python
@@ -139,12 +150,16 @@ formato exacto que genera xlsxwriter.
    promediar la acumulativa.
 4. **Desviación estándar muestral** (`STDEV.S`) con `IFERROR` si hay menos de 2
    datos.
-5. **Gráficos solo sobre `Promedio Final`**.
+5. **Gráficos por evaluación regular**: barras + torta para cada una; al
+   final, resumen y gráficos del `Promedio Final` en la hoja `Final`. Se
+   mantiene en el mismo archivo (no en un workbook aparte) porque un archivo
+   separado necesitaría referencias externas a `Grades` o duplicar la planilla,
+   y las referencias se rompen al mover o renombrar archivos.
 6. **Aprobación desde 4.0**.
 7. **Intervalos** `[1,2[`, `[2,3[`, …, `[6,7]` con `COUNTIFS`.
-8. **Impresión**: cada hoja cabe en una página (horizontal, A4). Se limita
-   también la altura porque LibreOffice agranda las planillas angostas al
-   ajustar solo el ancho, y terminaban repartidas en dos páginas.
+8. **Impresión**: `Grades` y `Final` caben en una página (horizontal, A4);
+   `Stats` usa una página por evaluación con saltos manuales. Se ajusta solo el
+   ancho de `Stats` para que la leyenda de la torta no caiga en otra página.
 9. **RUT sin dígito verificador** no se marca inválido: solo se avisa cuando el
    dígito existe y no corresponde.
 10. **Errores bloqueantes** solo para entrada ilegible o ponderaciones que no

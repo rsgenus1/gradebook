@@ -177,7 +177,9 @@ def main() -> None:
     st.title("Planilla de notas")
     st.write(
         "Sube la lista del curso (nombre y RUT). Descargarás un Excel con la hoja "
-        "**Grades** para llenar las notas y la hoja **Stats**, que se actualiza sola."
+        "**Grades** para llenar las notas, la hoja **Stats** (barras y torta por "
+        "cada evaluación) y la hoja **Final** (resumen y promedio final). Las "
+        "estadísticas se actualizan solas."
     )
 
     uploaded = st.file_uploader("Planilla de entrada", type=["xlsx", "xls", "csv"])

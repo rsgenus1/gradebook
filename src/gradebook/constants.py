@@ -19,6 +19,7 @@ GRADE_STEP = Decimal("0.1")
 
 SHEET_GRADES = "Grades"
 SHEET_STATS = "Stats"
+SHEET_FINAL = "Final"
 TABLE_NAME = "tblGrades"
 
 COL_NAME = "Nombre"
