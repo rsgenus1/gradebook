@@ -63,8 +63,8 @@ adaptador delgado. Ver `AGENTS.md` para el detalle de las reglas.
 - [x] Títulos, etiquetas, colores coherentes, sin cuadrículas recargadas.
 
 ### 9. API pública y CLI
-- [ ] `gradebook/__init__.py` exporta la API mínima.
-- [ ] CLI `python -m gradebook entrada.xlsx --preset 3_evaluaciones -o salida.xlsx`.
+- [x] `gradebook/__init__.py` exporta la API mínima.
+- [x] CLI `python -m gradebook entrada.xlsx --preset 3_evaluaciones -o salida.xlsx`.
 
 ### 10. UI Streamlit
 - [ ] Subida, elección de columnas, vista previa normalizada y avisos.
