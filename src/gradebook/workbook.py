@@ -391,7 +391,9 @@ def _write_grades(
 
     sheet.set_landscape()
     sheet.set_paper(9)  # A4
-    sheet.fit_to_pages(1, 0)
+    # Una sola página (LibreOffice escala hacia arriba si solo se limita el
+    # ancho, y una planilla angosta terminaría repartida en dos páginas).
+    sheet.fit_to_pages(1, 1)
     sheet.repeat_rows(_WEIGHT_ROW, _HEADER_ROW)
     sheet.center_horizontally()
     sheet.set_margins(0.25, 0.25, 0.5, 0.5)
@@ -550,15 +552,17 @@ def _write_stats(
     stat_columns.append((C.COL_FINAL, layout.final_col))
 
     last_value_col = len(stat_columns)
+    # El subtítulo necesita algo de ancho también en configuraciones angostas.
+    merge_col = max(last_value_col, 7)
 
     sheet.set_column(0, 0, 26)
-    sheet.set_column(1, last_value_col + 2, 15)
+    sheet.set_column(1, max(last_value_col, 7), 15)
 
     sheet.merge_range(
         _STATS_TITLE_ROW,
         0,
         _STATS_TITLE_ROW,
-        last_value_col,
+        merge_col,
         "Estadísticas del curso",
         fmt.title,
     )
@@ -566,7 +570,7 @@ def _write_stats(
         _STATS_SUBTITLE_ROW,
         0,
         _STATS_SUBTITLE_ROW,
-        last_value_col,
+        merge_col,
         "Fórmulas vivas: se actualizan solas al editar la hoja "
         f"{C.SHEET_GRADES}. Las celdas en blanco cuentan como inasistencia.",
         fmt.subtitle,
@@ -606,7 +610,8 @@ def _write_stats(
     _add_pie_chart(workbook, sheet)
 
     sheet.set_landscape()
-    sheet.fit_to_pages(1, 0)
+    sheet.set_paper(9)
+    sheet.fit_to_pages(1, 1)
     sheet.set_margins(0.3, 0.3, 0.5, 0.5)
 
 

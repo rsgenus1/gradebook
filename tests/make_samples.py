@@ -14,11 +14,13 @@ from __future__ import annotations
 import argparse
 import io
 import random
+import re
+import zipfile
 from collections.abc import Sequence
 from pathlib import Path
 
-import openpyxl
 import xlsxwriter
+from xlsxwriter.utility import xl_cell_to_rowcol, xl_col_to_name
 
 from gradebook import (
     PRESETS,
@@ -141,15 +143,18 @@ def build_grades(
         ]
 
         if index == 0 and n_evaluations >= 3:
-            evaluations = [3.55, 3.95, 5.05, *evaluations[3:]]
+            edges = [3.55, 3.95, 5.05, *evaluations[3:]]
+            if blank_evaluation is not None:
+                edges[blank_evaluation] = None
+            evaluations = edges
             controls = [
                 6.95, 1.0, 7.0, 3.9, 4.0, None, *controls[6:]
             ][:n_controls]
-        if index == 1 and n_evaluations >= 2:
+        if index == 1 and count > 1 and n_evaluations >= 2:
             evaluations[1] = None  # evaluación faltante → cuenta 1.0 en el final
-        if index == 2 and n_controls:
+        if index == 2 and count > 2 and n_controls:
             controls = [None] * n_controls  # sin controles → acumulativa vacía
-        if index == count - 1:
+        if index == count - 1 and count > 1:
             evaluations = [None] * n_evaluations
             controls = [None] * n_controls
 
@@ -163,26 +168,70 @@ def fill_workbook(
     grades: Sequence[dict[str, list[float | None]]],
     path: Path,
 ) -> None:
-    """Escribe notas de ejemplo dentro del workbook generado por el motor."""
-    workbook = openpyxl.load_workbook(io.BytesIO(build_workbook(students, scheme)))
-    sheet = workbook["Grades"]
+    """Escribe notas de ejemplo dentro del workbook generado por el motor.
 
-    header_row = 2  # fila de encabezados (1-based)
-    column_by_header = {
-        sheet.cell(row=header_row, column=column).value: column
-        for column in range(1, sheet.max_column + 1)
-    }
+    Se modifica directamente el XML de la hoja para no pasar el archivo por
+    openpyxl: así los gráficos conservan exactamente el formato que genera
+    xlsxwriter (openpyxl los reserializa y LibreOffice los muestra distinto).
+    """
+    column_by_header: dict[str, int] = {}
+    column = 2  # A = Nombre, B = RUT (índices 0-based)
+    for evaluation in scheme.evaluations:
+        column_by_header[evaluation.name] = column
+        column += 1
+    for name in scheme.control_names:
+        column_by_header[name] = column
+        column += 1
 
+    values_by_row: dict[int, dict[int, float]] = {}
     for offset, grade in enumerate(grades):
-        row = header_row + 1 + offset
+        row = 3 + offset  # fila 1 = pesos, fila 2 = encabezado
+        cells = values_by_row.setdefault(row, {})
         for evaluation, value in zip(scheme.evaluations, grade["evaluations"], strict=True):
             if value is not None:
-                sheet.cell(row=row, column=column_by_header[evaluation.name]).value = value
+                cells[column_by_header[evaluation.name]] = float(value)
         for name, value in zip(scheme.control_names, grade["controls"], strict=True):
             if value is not None:
-                sheet.cell(row=row, column=column_by_header[name]).value = value
+                cells[column_by_header[name]] = float(value)
 
-    workbook.save(path)
+    path.write_bytes(_inject_values(build_workbook(students, scheme), values_by_row))
+
+
+_CELL_RE = re.compile(r'<c r="([A-Z]+)(\d+)"[^>]*?(?:/>|>.*?</c>)', re.S)
+
+
+def _inject_values(data: bytes, values_by_row: dict[int, dict[int, float]]) -> bytes:
+    """Inserta celdas numéricas en la primera hoja sin tocar el resto del zip."""
+    with zipfile.ZipFile(io.BytesIO(data)) as source:
+        items = [(info, source.read(info.filename)) for info in source.infolist()]
+
+    target = "xl/worksheets/sheet1.xml"
+    result = io.BytesIO()
+    with zipfile.ZipFile(result, "w", zipfile.ZIP_DEFLATED) as destination:
+        for info, content in items:
+            if info.filename == target:
+                content = _patch_sheet_xml(content.decode("utf-8"), values_by_row).encode("utf-8")
+            destination.writestr(info, content)
+    return result.getvalue()
+
+
+def _patch_sheet_xml(xml: str, values_by_row: dict[int, dict[int, float]]) -> str:
+    for row_number, new_cells in sorted(values_by_row.items()):
+        row_pattern = re.compile(rf'(<row r="{row_number}"[^>]*>)(.*?)(</row>)', re.S)
+        match = row_pattern.search(xml)
+        if match is None:
+            continue
+        pieces: list[tuple[int, str]] = [
+            (xl_cell_to_rowcol(f"{cell.group(1)}{cell.group(2)}")[1], cell.group(0))
+            for cell in _CELL_RE.finditer(match.group(2))
+        ]
+        for column, value in new_cells.items():
+            reference = f"{xl_col_to_name(column)}{row_number}"
+            pieces.append((column, f'<c r="{reference}"><v>{value!r}</v></c>'))
+        pieces.sort(key=lambda piece: piece[0])
+        inner = "".join(cell for _, cell in pieces)
+        xml = xml[: match.start(2)] + inner + xml[match.end(2) :]
+    return xml
 
 
 # --- Escenarios ------------------------------------------------------------
@@ -211,11 +260,11 @@ def generate(outdir: Path) -> list[Path]:
 
     main_students = read_students(input_path.read_bytes())
     single_student = StudentTable(main_students.students[:1])
-    scenarios: list[tuple[str, StudentTable, GradingScheme, int, int]] = [
-        ("curso_3eval.xlsx", main_students, PRESETS["3_evaluaciones"], 11, 0),
-        ("curso_2eval.xlsx", main_students, PRESETS["2_evaluaciones"], 21, 0),
-        ("curso_personalizado.xlsx", main_students, custom_scheme(), 31, 0),
-        ("curso_1estudiante.xlsx", single_student, PRESETS["3_evaluaciones"], 41, 0),
+    scenarios: list[tuple[str, StudentTable, GradingScheme, int, int | None]] = [
+        ("curso_3eval.xlsx", main_students, PRESETS["3_evaluaciones"], 11, None),
+        ("curso_2eval.xlsx", main_students, PRESETS["2_evaluaciones"], 21, None),
+        ("curso_personalizado.xlsx", main_students, custom_scheme(), 31, None),
+        ("curso_1estudiante.xlsx", single_student, PRESETS["3_evaluaciones"], 41, None),
         ("curso_sin_asistentes.xlsx", main_students, PRESETS["3_evaluaciones"], 51, 1),
     ]
 

@@ -81,8 +81,8 @@ adaptador delgado. Ver `AGENTS.md` para el detalle de las reglas.
 - [x] Comprobar ausencia de `#DIV/0!`, `#NUM!` y `#VALUE!`.
 
 ### 13. Revisión visual
-- [ ] Exportar a PDF y revisar las imágenes por preset.
-- [ ] Corregir problemas de legibilidad, superposición y colores.
+- [x] Exportar a PDF y revisar las imágenes por preset.
+- [x] Corregir problemas de legibilidad, superposición y colores.
 
 ### 14. Cierre
 - [ ] README con uso, arquitectura y limitaciones.
