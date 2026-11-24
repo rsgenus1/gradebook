@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -49,7 +50,7 @@ print("ok")
         capture_output=True,
         text=True,
         timeout=120,
-        env={"PYTHONPATH": str(SRC), "PATH": "/usr/bin:/bin"},
+        env={**os.environ, "PYTHONPATH": str(SRC)},
     )
     assert result.returncode == 0, result.stderr
     assert result.stdout.strip() == "ok"

@@ -24,8 +24,7 @@ Source = bytes | bytearray | memoryview | BinaryIO
 _XLSX_MAGIC = b"PK\x03\x04"
 _XLS_MAGIC = b"\xd0\xcf\x11\xe0"
 
-_HEADER_ROW = 1  # la primera fila es el encabezado
-_FIRST_DATA_ROW = 2
+_FIRST_DATA_ROW = 2  # la fila 1 es el encabezado
 
 _NAME_HINTS = (
     "nombre",

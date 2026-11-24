@@ -85,5 +85,5 @@ adaptador delgado. Ver `AGENTS.md` para el detalle de las reglas.
 - [x] Corregir problemas de legibilidad, superposición y colores.
 
 ### 14. Cierre
-- [ ] README con uso, arquitectura y limitaciones.
+- [x] README con uso, arquitectura y limitaciones.
 - [ ] Listar al usuario las decisiones de la sección 10 de `AGENTS.md`.
