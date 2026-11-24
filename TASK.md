@@ -45,22 +45,22 @@ adaptador delgado. Ver `AGENTS.md` para el detalle de las reglas.
 - [x] Autodetección de columnas de nombre y RUT por encabezado.
 
 ### 6. Hoja `Grades`
-- [ ] Tabla `tblGrades` con filas alternadas y encabezados legibles.
-- [ ] Pesos en celdas encima de cada columna ponderada + verificación `OK 100%`.
-- [ ] Columnas calculadas `Nota Acumulativa` y `Promedio Final` con fórmulas.
-- [ ] Validación de datos 1–7 (permite vacío), formato `0.0`, rojo si `< 4.0`.
-- [ ] Filas alternadas, congelar paneles, anchos, impresión horizontal a 1 página.
+- [x] Tabla `tblGrades` con filas alternadas y encabezados legibles.
+- [x] Pesos en celdas encima de cada columna ponderada + verificación `OK 100%`.
+- [x] Columnas calculadas `Nota Acumulativa` y `Promedio Final` con fórmulas.
+- [x] Validación de datos 1–7 (permite vacío), formato `0.0`, rojo si `< 4.0`.
+- [x] Filas alternadas, congelar paneles, anchos, impresión horizontal a 1 página.
 
 ### 7. Hoja `Stats`
-- [ ] Máximo, mínimo, asistentes, reprobados, % reprobados, mediana y desv. estándar.
-- [ ] Todo con fórmulas que leen `Grades`, con `IFERROR` donde corresponde.
-- [ ] Sin errores visibles con cursos vacíos o de un estudiante.
+- [x] Máximo, mínimo, asistentes, reprobados, % reprobados, mediana y desv. estándar.
+- [x] Todo con fórmulas que leen `Grades`, con `IFERROR` donde corresponde.
+- [x] Sin errores visibles con cursos vacíos o de un estudiante.
 
 ### 8. Gráficos
-- [ ] Tabla auxiliar con intervalos `[1,2[` … `[6,7]` y `COUNTIFS`.
-- [ ] Gráfico de barras por intervalos (sin leyenda redundante).
-- [ ] Gráfico de torta: aprobado / reprobado `< 3.0` / reprobado `3.0–3.9`.
-- [ ] Títulos, etiquetas, colores coherentes, sin cuadrículas recargadas.
+- [x] Tabla auxiliar con intervalos `[1,2[` … `[6,7]` y `COUNTIFS`.
+- [x] Gráfico de barras por intervalos (sin leyenda redundante).
+- [x] Gráfico de torta: aprobado / reprobado `< 3.0` / reprobado `3.0–3.9`.
+- [x] Títulos, etiquetas, colores coherentes, sin cuadrículas recargadas.
 
 ### 9. API pública y CLI
 - [ ] `gradebook/__init__.py` exporta la API mínima.
