@@ -180,9 +180,11 @@ def main() -> None:
         "**Grades** para llenar las notas y la hoja **Stats**, que se actualiza sola."
     )
 
-    uploaded = st.file_uploader("Planilla de entrada", type=["xlsx", "csv"])
+    uploaded = st.file_uploader("Planilla de entrada", type=["xlsx", "xls", "csv"])
     if uploaded is None:
-        st.info("Acepta `.xlsx` o `.csv` con al menos una columna de nombre y una de RUT.")
+        st.info(
+            "Acepta `.xlsx`, `.xls` o `.csv` con al menos una columna de nombre y una de RUT."
+        )
         return
 
     data = uploaded.getvalue()

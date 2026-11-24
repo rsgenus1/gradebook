@@ -1,4 +1,4 @@
-"""Lectura de la planilla de entrada (.xlsx / .csv) en memoria.
+"""Lectura de la planilla de entrada (.xlsx / .xls / .csv) en memoria.
 
 Todo se lee como texto para no perder ceros a la izquierda ni la ``K`` de un
 RUT. La API no acepta rutas: recibe ``bytes`` o un file-like.
@@ -22,7 +22,7 @@ from .rut import format_rut, is_valid_rut, normalize_rut
 Source = bytes | bytearray | memoryview | BinaryIO
 
 _XLSX_MAGIC = b"PK\x03\x04"
-_XLS_MAGIC = b"\xd0\xcf\x11\xe0"
+_OLE2_MAGIC = b"\xd0\xcf\x11\xe0"  # .xls heredado (BIFF) y otros documentos Office
 
 _FIRST_DATA_ROW = 2  # la fila 1 es el encabezado
 
@@ -182,14 +182,8 @@ def _read_table(source: Source) -> tuple[tuple[str, ...], list[tuple[int, dict[s
     if not data:
         raise InputFormatError("El archivo está vacío.")
 
-    if data.startswith(_XLSX_MAGIC):
-        frame = _read_xlsx(data)
-    elif data.startswith(_XLS_MAGIC):
-        raise InputFormatError(
-            "El formato .xls antiguo no está soportado. Guarda la planilla como .xlsx o .csv."
-        )
-    else:
-        frame = _read_csv(data)
+    is_excel = data.startswith((_XLSX_MAGIC, _OLE2_MAGIC))
+    frame = _read_excel(data) if is_excel else _read_csv(data)
 
     columns = _clean_headers(frame.columns)
     rows: list[tuple[int, dict[str, str]]] = []
@@ -203,7 +197,8 @@ def _read_table(source: Source) -> tuple[tuple[str, ...], list[tuple[int, dict[s
     return columns, rows
 
 
-def _read_xlsx(data: bytes) -> pl.DataFrame:
+def _read_excel(data: bytes) -> pl.DataFrame:
+    """Lee .xlsx o .xls heredado con calamine (vía fastexcel)."""
     try:
         workbook = fastexcel.read_excel(data)
         if not workbook.sheet_names:
@@ -213,7 +208,7 @@ def _read_xlsx(data: bytes) -> pl.DataFrame:
     except InputFormatError:
         raise
     except Exception as exc:  # noqa: BLE001 - se traduce a error de dominio
-        raise InputFormatError(f"No pude leer el archivo Excel: {exc}") from exc
+        raise InputFormatError(f"No pude leer el archivo Excel (.xlsx/.xls): {exc}") from exc
 
 
 def _read_csv(data: bytes) -> pl.DataFrame:

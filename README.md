@@ -31,7 +31,7 @@ El motor (`gradebook`) se instala y funciona **sin Streamlit**.
 uv run streamlit run ui/streamlit_app.py
 ```
 
-1. Sube la planilla (`.xlsx` o `.csv`).
+1. Sube la planilla (`.xlsx`, `.xls` o `.csv`).
 2. Elige las columnas de nombre y RUT; revisa la vista previa normalizada y
    los avisos.
 3. Elige la ponderación (2 evaluaciones, 3 evaluaciones o personalizada).
@@ -53,8 +53,8 @@ uv run python -m gradebook entrada.xlsx --name-col "Nombre Completo" \
 
 ### Formato de entrada
 
-Cualquier `.xlsx` (primera hoja) o `.csv` (separador `,` `;` tabulación o `|`)
-con una columna de nombre y una de RUT. Todo se lee como **texto**, para no
+Cualquier `.xlsx` o `.xls` (primera hoja), o un `.csv` (separador `,` `;`
+tabulación o `|`) con una columna de nombre y una de RUT. Todo se lee como **texto**, para no
 perder ceros a la izquierda ni la `K`. Las columnas se autodetectan por
 encabezado (`nombre`, `alumno`, `rut`, `run`, `documento`, …) o, si no hay
 pista, por el contenido.
@@ -152,8 +152,9 @@ formato exacto que genera xlsxwriter.
 
 ## Limitaciones conocidas
 
-- No soporta el formato antiguo `.xls` (se sugiere guardar como `.xlsx`).
 - Lee solo la primera hoja de un libro de Excel.
+- El `.xls` heredado se lee con calamine; los `.xls` con contraseña o
+  corruptos se rechazan con un error claro.
 - `xlsxwriter` no calcula fórmulas: los visores que no recalculan ven celdas
   vacías hasta abrir el archivo en Excel o LibreOffice (ambos recalculan).
 - Los gráficos usan etiquetas de datos estándar de Excel; si se edita el

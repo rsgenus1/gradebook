@@ -35,7 +35,7 @@ def build_parser() -> argparse.ArgumentParser:
         prog="gradebook",
         description="Genera un Excel de notas con hojas Grades y Stats.",
     )
-    parser.add_argument("input", type=Path, help="planilla de entrada (.xlsx o .csv)")
+    parser.add_argument("input", type=Path, help="planilla de entrada (.xlsx, .xls o .csv)")
     parser.add_argument(
         "-o",
         "--output",

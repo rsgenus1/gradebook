@@ -40,7 +40,7 @@ adaptador delgado. Ver `AGENTS.md` para el detalle de las reglas.
 - [x] Regla de componente faltante = 1.0 solo en el promedio final.
 
 ### 5. Lectura de la planilla de entrada
-- [x] `read_students()` y `detect_columns()` sobre `.xlsx` / `.csv` en memoria.
+- [x] `read_students()` y `detect_columns()` sobre `.xlsx` / `.xls` / `.csv` en memoria.
 - [x] Todas las columnas leídas como texto (RUT con ceros y `K` intactos).
 - [x] Autodetección de columnas de nombre y RUT por encabezado.
 

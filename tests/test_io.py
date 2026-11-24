@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+from pathlib import Path
 
 import pytest
 import xlsxwriter
@@ -109,9 +110,26 @@ def test_raises_on_empty_input() -> None:
         read_students(b"")
 
 
-def test_raises_on_legacy_xls() -> None:
-    with pytest.raises(InputFormatError, match="xls"):
-        read_students(b"\xd0\xcf\x11\xe0resto")
+def test_reads_legacy_xls() -> None:
+    fixture = Path(__file__).resolve().parent / "fixtures" / "entrada.xls"
+    table = read_students(fixture.read_bytes())
+    assert table.name_col == "Nombre"
+    assert table.rut_col == "RUT"
+    assert [student.name for student in table.students] == [
+        "Ana Ñúñez",
+        "Beto Soto",
+        "Carla Díaz",
+    ]
+    assert [student.rut for student in table.students] == [
+        "123456785",
+        "98765433",
+        "111111111",
+    ]
+
+
+def test_raises_on_unreadable_ole_file() -> None:
+    with pytest.raises(InputFormatError, match="Excel"):
+        read_students(b"\xd0\xcf\x11\xe0" + b"esto no es un libro")
 
 
 def test_raises_when_columns_are_missing() -> None:
