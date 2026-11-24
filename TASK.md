@@ -28,9 +28,9 @@ adaptador delgado. Ver `AGENTS.md` para el detalle de las reglas.
 - [x] Constantes compartidas (notas, nombres de hojas, tabla).
 
 ### 3. Normalización de RUT
-- [ ] `normalize_rut()`: sin puntos, guion ni espacios, en mayúsculas.
-- [ ] Validación módulo 11 (solo como aviso, nunca bloqueo).
-- [ ] Detección de duplicados y de RUT vacíos.
+- [x] `normalize_rut()`: sin puntos, guion ni espacios, en mayúsculas.
+- [x] Validación módulo 11 (solo como aviso, nunca bloqueo).
+- [x] Detección de duplicados y de RUT vacíos.
 
 ### 4. Ponderaciones y redondeo
 - [ ] `GradingScheme` inmutable con evaluaciones + peso de la acumulativa.
