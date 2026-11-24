@@ -72,13 +72,13 @@ adaptador delgado. Ver `AGENTS.md` para el detalle de las reglas.
 - [x] Descarga del `.xlsx` en memoria; sin persistir datos personales.
 
 ### 11. Datos de ejemplo y tests
-- [ ] `tests/make_samples.py` con curso sintético (~35), tildes/ñ, blancos y casos borde.
-- [ ] `test_rut.py`, `test_grading.py`, `test_workbook.py`, `test_engine_independence.py`.
-- [ ] Escenarios: 1 estudiante, evaluación sin asistentes, cada preset.
+- [x] `tests/make_samples.py` con curso sintético (~35), tildes/ñ, blancos y casos borde.
+- [x] `test_rut.py`, `test_grading.py`, `test_workbook.py`, `test_engine_independence.py`.
+- [x] Escenarios: 1 estudiante, evaluación sin asistentes, cada preset.
 
 ### 12. Verificación end-to-end
-- [ ] Recalcular con LibreOffice y comparar `Promedio Final` y estadísticas.
-- [ ] Comprobar ausencia de `#DIV/0!`, `#NUM!` y `#VALUE!`.
+- [x] Recalcular con LibreOffice y comparar `Promedio Final` y estadísticas.
+- [x] Comprobar ausencia de `#DIV/0!`, `#NUM!` y `#VALUE!`.
 
 ### 13. Revisión visual
 - [ ] Exportar a PDF y revisar las imágenes por preset.

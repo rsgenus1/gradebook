@@ -206,7 +206,7 @@ def _read_table(source: Source) -> tuple[tuple[str, ...], list[tuple[int, dict[s
 
 def _read_xlsx(data: bytes) -> pl.DataFrame:
     try:
-        workbook = fastexcel.read_excel(io.BytesIO(data))
+        workbook = fastexcel.read_excel(data)
         if not workbook.sheet_names:
             raise InputFormatError("El archivo no tiene hojas.")
         sheet = workbook.load_sheet(0, dtypes="string", whitespace_as_null=True)

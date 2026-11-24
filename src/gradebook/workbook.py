@@ -164,6 +164,15 @@ class _Formats:
                 "indent": 1,
             }
         )
+        self.group_label = workbook.add_format(
+            {
+                **base,
+                "bold": True,
+                "font_color": C.COLOR_WEIGHT_FONT,
+                "bg_color": C.COLOR_WEIGHT_BG,
+                "align": "center",
+            }
+        )
         self.weight = workbook.add_format(
             {
                 **base,
@@ -355,17 +364,22 @@ def _write_grades(
         },
     )
 
-    # Notas bajo 4.0 en rojo, tanto de entrada como calculadas.
+    # Notas bajo 4.0 en rojo (se compara el valor ya redondeado a 1 decimal,
+    # para que el color coincida con lo que se muestra en pantalla).
     for column in layout.grade_cols:
+        letter = xl_col_to_name(column)
         sheet.conditional_format(
             _FIRST_DATA_ROW,
             column,
             last_data_row,
             column,
             {
-                "type": "cell",
-                "criteria": "<",
-                "value": float(C.PASSING_GRADE),
+                "type": "formula",
+                "criteria": (
+                    f"=AND(ISNUMBER({letter}{_FIRST_DATA_ROW + 1}),"
+                    f"ROUND({letter}{_FIRST_DATA_ROW + 1},{_GRADE_DECIMALS})<"
+                    f"{_literal(C.PASSING_GRADE)})"
+                ),
                 "format": fmt.red,
             },
         )
@@ -420,6 +434,16 @@ def _write_weight_row(
     sheet.write_string(_WEIGHT_ROW, 0, "Pesos", fmt.weight_label)
     for column, weight in zip(layout.component_cols, scheme.component_weights, strict=True):
         sheet.write_number(_WEIGHT_ROW, column, float(weight_fraction(weight)), fmt.weight)
+
+    if layout.control_cols:
+        first_control = layout.control_cols[0]
+        last_control = layout.control_cols[-1]
+        if first_control == last_control:
+            sheet.write_string(_WEIGHT_ROW, first_control, "Controles", fmt.group_label)
+        else:
+            sheet.merge_range(
+                _WEIGHT_ROW, first_control, _WEIGHT_ROW, last_control, "Controles", fmt.group_label
+            )
 
     first = xl_col_to_name(layout.component_cols[0])
     last = xl_col_to_name(layout.component_cols[-1])
@@ -665,7 +689,13 @@ def _add_bar_chart(
             "name": "Estudiantes",
             "categories": [C.SHEET_STATS, first, 0, last, 0],
             "values": [C.SHEET_STATS, first, 1, last, 1],
-            "data_labels": {"value": True, "font": {"size": 10, "bold": True}},
+            "data_labels": {
+                "value": True,
+                "category": False,
+                "series_name": False,
+                "legend_key": False,
+                "font": {"size": 10, "bold": True},
+            },
             "points": [
                 {"fill": {"color": C.COLOR_FAILED_DARK}},
                 {"fill": {"color": C.COLOR_FAILED_RED}},
@@ -692,6 +722,7 @@ def _add_bar_chart(
             "num_font": {"size": 9},
             "major_gridlines": {"visible": False},
             "min": 0,
+            "major_unit": 1,
             "major_tick_mark": "none",
         }
     )
@@ -717,7 +748,9 @@ def _add_pie_chart(
             "data_labels": {
                 "percentage": True,
                 "category": False,
+                "series_name": False,
                 "value": False,
+                "legend_key": False,
                 "font": {"size": 11, "bold": True},
             },
             "points": [
